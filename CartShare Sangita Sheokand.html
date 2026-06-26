@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CartShare Challenge</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* CSS GRID FOR LAYOUT */
+        .app-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 992px) {
+            .app-layout {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+
+        /* FLEXBOX FOR PRODUCT CARDS & ITEMS */
+        .product-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #dee2e6;
+            padding: 0.5rem 0;
+        }
+
+        /* PRINT MEDIA RULES */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #receipt-print-area, #receipt-print-area * {
+                visibility: visible;
+            }
+            #receipt-print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                color: #000 !important;
+                background: #fff !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <div id="login-screen" class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm p-4">
+                    <h3 class="text-center mb-4 text-primary">🛒 CartShare Join</h3>
+                    <div class="mb-3">
+                        <label for="username-input" class="form-label">Your Name</label>
+                        <input type="text" id="username-input" class="form-control" placeholder="e.g., Alice" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="room-input" class="form-label">Room ID</label>
+                        <input type="text" id="room-input" class="form-control" placeholder="e.g., Room-123 (or leave blank)">
+                    </div>
+                    <button id="join-btn" class="btn btn-primary w-100">Enter Ecosystem</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" class="container my-4 d-none">
+        <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm no-print">
+            <div>
+                <h4 class="mb-0">Room: <span id="display-room" class="text-primary"></span></h4>
+                <small class="text-muted">Shopping as: <strong id="display-user"></strong></small>
+            </div>
+            <button id="leave-btn" class="btn btn-outline-danger btn-sm">Leave Room</button>
+        </div>
+
+        <div class="app-layout">
+            
+            <div class="no-print">
+                <h5 class="mb-3 font-weight-bold">Product Catalog</h5>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="card product-card p-3 shadow-sm">
+                            <div>
+                                <h6 class="mb-1">Wireless Headphones</h6>
+                                <p class="text-muted small">$59.99</p>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary mt-2" onclick="addToCart('Wireless Headphones', 59.99)">Add to Cart</button>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="card product-card p-3 shadow-sm">
+                            <div>
+                                <h6 class="mb-1">Mechanical Keyboard</h6>
+                                <p class="text-muted small">$89.99</p>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary mt-2" onclick="addToCart('Mechanical Keyboard', 89.99)">Add to Cart</button>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="card product-card p-3 shadow-sm">
+                            <div>
+                                <h6 class="mb-1">Ergonomic Mouse</h6>
+                                <p class="text-muted small">$34.50</p>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary mt-2" onclick="addToCart('Ergonomic Mouse', 34.50)">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="receipt-print-area">
+                <div class="card shadow-sm p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                        <h5 class="mb-0">🛒 Shared Shopping Cart</h5>
+                        <button id="print-btn" class="btn btn-success btn-sm no-print" onclick="printReceipt()">Print Receipt</button>
+                    </div>
+
+                    <div id="cart-items-container" class="mb-4">
+                        <p class="text-muted text-center my-4 py-3">Your collaborative cart is empty.</p>
+                    </div>
+
+                    <div class="border-top pt-3 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold">Total Cost:</h5>
+                        <h4 id="cart-total" class="mb-0 text-success fw-bold">$0.00</h4>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Global variables state
+        let currentRoom = "";
+        let currentUser = "";
+        let cart = [];
+
+        // Auth elements
+        const loginScreen = document.getElementById('login-screen');
+        const mainApp = document.getElementById('main-app');
+        const joinBtn = document.getElementById('join-btn');
+        const leaveBtn = document.getElementById('leave-btn');
+        const usernameInput = document.getElementById('username-input');
+        const roomInput = document.getElementById('room-input');
+
+        // Dynamic Display Info
+        const displayRoom = document.getElementById('display-room');
+        const displayUser = document.getElementById('display-user');
+        const cartContainer = document.getElementById('cart-items-container');
+        const cartTotalDisplay = document.getElementById('cart-total');
+
+        // --- A. USER ACCESS & AUTH HANDLING ---
+        joinBtn.addEventListener('click', () => {
+            const user = usernameInput.value.trim();
+            let room = roomInput.value.trim();
+
+            if (!user) {
+                alert("Please type your name before joining.");
+                return;
+            }
+
+            if (!room) room = "Room-" + Math.floor(100 + Math.random() * 900); // Generate simple default room
+
+            currentUser = user;
+            currentRoom = room;
+
+            // Session persistence
+            sessionStorage.setItem('cartshare_user', currentUser);
+            sessionStorage.setItem('cartshare_room', currentRoom);
+
+            initializeUI();
+        });
+
+        leaveBtn.addEventListener('click', () => {
+            sessionStorage.clear();
+            location.reload();
+        });
+
+        function checkSession() {
+            const savedUser = sessionStorage.getItem('cartshare_user');
+            const savedRoom = sessionStorage.getItem('cartshare_room');
+            if (savedUser && savedRoom) {
+                currentUser = savedUser;
+                currentRoom = savedRoom;
+                initializeUI();
+            }
+        }
+
+        function initializeUI() {
+            loginScreen.classList.add('d-none');
+            mainApp.classList.remove('d-none');
+            displayRoom.innerText = currentRoom;
+            displayUser.innerText = currentUser;
+            
+            loadCartData(); // Load shared states
+        }
+
+        // --- B. DATA PERSISTENCE (LocalStorage) ---
+        function loadCartData() {
+            const storedCart = localStorage.getItem(`cartshare_data_${currentRoom}`);
+            cart = storedCart ? JSON.parse(storedCart) : [];
+            renderCart();
+        }
+
+        function saveCartData() {
+            localStorage.setItem(`cartshare_data_${currentRoom}`, JSON.stringify(cart));
+            renderCart();
+        }
+
+        function addToCart(name, price) {
+            // Find if item added by this user exists
+            const existingIndex = cart.findIndex(item => item.name === name && item.addedBy === currentUser);
+
+            if (existingIndex > -1) {
+                cart[existingIndex].qty += 1;
+            } else {
+                cart.push({ name, price, qty: 1, addedBy: currentUser });
+            }
+            saveCartData();
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            saveCartData();
+        }
+
+        function renderCart() {
+            if (cart.length === 0) {
+                cartContainer.innerHTML = `<p class="text-muted text-center my-4 py-3">Your collaborative cart is empty.</p>`;
+                cartTotalDisplay.innerText = "$0.00";
+                return;
+            }
+
+            let htmlString = "";
+            let grandTotal = 0;
+
+            cart.forEach((item, index) => {
+                const totalItemPrice = item.price * item.qty;
+                grandTotal += totalItemPrice;
+
+                htmlString += `
+                    <div class="cart-item">
+                        <div>
+                            <span class="fw-bold">${item.name}</span> <span class="text-muted text-xs">x${item.qty}</span>
+                            <div class="small text-muted">Added by: ${item.addedBy}</div>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="me-3 fw-bold text-dark">$${totalItemPrice.toFixed(2)}</span>
+                            <button class="btn btn-sm btn-link text-danger no-print p-0" onclick="removeFromCart(${index})">Remove</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            cartContainer.innerHTML = htmlString;
+            cartTotalDisplay.innerText = `$${grandTotal.toFixed(2)}`;
+        }
+
+        // --- C. COLLABORATION (Cross-Tab JavaScript Syncing) ---
+        window.addEventListener('storage', (event) => {
+            // Only respond if the modified data matches our active Room ID
+            if (event.key === `cartshare_data_${currentRoom}`) {
+                loadCartData();
+            }
+        });
+
+        // --- D. PRINTING (CSS Media Rules Trigger) ---
+        function printReceipt() {
+            window.print();
+        }
+
+        // Run session diagnostics on immediate mount
+        checkSession();
+    </script>
+</body>
+</html>
